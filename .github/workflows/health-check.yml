@@ -1,0 +1,51 @@
+name: Endpoint Health Check
+
+on:
+  schedule:
+    # Runs every 2 minutes
+    - cron: '*/2 * * * *'
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Ping endpoint
+        id: ping
+        run: |
+          HTTP_STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+            --max-time 30 \
+            https://google-solution-challenge-2026-d9f5.onrender.com)
+          echo "status=$HTTP_STATUS" >> "$GITHUB_OUTPUT"
+          echo "HTTP status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
+            echo "Endpoint is healthy."
+          else
+            echo "Endpoint returned unexpected status: $HTTP_STATUS"
+            exit 1
+          fi
+
+      - name: Capture current timestamp
+        if: failure()
+        id: timestamp
+        run: echo "now=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_OUTPUT"
+
+      - name: Send alert email on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "🚨 Alert: Endpoint is DOWN"
+          to: officialanuj004@gmail.com
+          from: ${{ secrets.MAIL_FROM }}
+          body: |
+            The endpoint https://google-solution-challenge-2026-d9f5.onrender.com
+            is not responding or returned an error.
+
+            Time (UTC): ${{ steps.timestamp.outputs.now }}
+            Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Please investigate immediately.
