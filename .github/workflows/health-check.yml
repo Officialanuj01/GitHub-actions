@@ -2,8 +2,8 @@ name: Endpoint Health Check
 
 on:
   schedule:
-    # Runs every 5 minutes (GitHub Actions minimum schedule interval)
-    - cron: '*/5 * * * *'
+    # Runs every 6 minutes (GitHub Actions minimum schedule interval is 5 minutes)
+    - cron: '*/6 * * * *'
 
 jobs:
   health-check:
